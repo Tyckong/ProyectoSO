@@ -1,4 +1,11 @@
-#include <bits/stdc++.h>	//Include all standard c++ headers.
+#include <string>
+#include <vector>
+#include <sstream>
+#include <iostream>
+#include <algorithm>
+#include <cstdlib>
+#include <unistd.h>
+#include <string.h>
 #include <sys/stat.h>
 #include <sys/wait.h>		//System specific headers for file process management spoken during class, like the wait() function for example.
 
@@ -76,7 +83,7 @@ void pipeless_command(vector<vector<string>> commands){
         }
     }else{
         char *arguments[commands[0].size() + 1];            //We create a char* array to store the command and its arguments in a format suitable for the 'execvp' system call.
-        for(int i=0; i<commands[0].size(); ++i){
+        for(size_t i=0; i<commands[0].size(); ++i){
             arguments[i] = strdup(commands[0][i].c_str());
         }
         arguments[commands[0].size()] = NULL;               //We set the last element of the array to NULL to indicate the end of the list of arguments.
@@ -114,8 +121,8 @@ int main(){
             pipeless_command(commands);
         }else{                              //Thanks Daniela and Jorge for explaining to me how pipes work. 
             char *arguments[commands.size()][maxim + 1];
-            for(int i=0; i< commands.size(); ++i){
-                for(int j=0; j<commands[i].size(); j++){
+            for(size_t i=0; i < commands.size(); ++i){
+                for(size_t j=0; j<commands[i].size(); j++){
                     arguments[i][j] = strdup(commands[i][j].c_str());
                 }
                 arguments[i][commands[i].size()] = NULL;
@@ -169,12 +176,12 @@ int main(){
                 dup2(Pipes[counter][READ], READ);   //Read from the last pipe.
                 close(Pipes[counter][WRITE]);       //Close the write end of the previous pipe.
             }
-            for(int l=0; l < commands.size(); ++l)
+            for(size_t l=0; l < commands.size(); ++l)
                 wait(NULL);
         }
         commands.clear();
         command.clear();
         cout << "Myshell Bachelet $ ";
-    }   //Clear commands and comand for the next iteration.
+    }   //Clear commands and command for the next iteration.
     return 0;
 }
