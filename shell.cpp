@@ -29,6 +29,11 @@ bool parser(string command, long long &maxim, vector<vector<string>> &commands){
         cout << "Myshell Bachelet $ ";
         return 1;
     }
+    else if(command == "wah"){
+        cout << "Wah!" << endl;
+        cout << "Myshell Bachelet $ ";
+        return 1;
+    }
 
     //Now, for VALID commands.
     string subcommand;
@@ -65,9 +70,9 @@ void pipeless_command(vector<vector<string>> commands){
     //This is going to be very fun.
     if(commands[0][0] == "cd"){         //We check for the 'cd' command used to change directory.
         if(commands[0].size() < 2){     //"If no directory is specified"...
-            const char *newDir = getenv("HOME :D");     //We try to change the directory to the user's home directory 
+            const char *newDir = getenv("HOME");     //We try to change the directory to the user's home directory 
             if(newDir == nullptr){                  //I get PTSD whenever pointers are brought back. 
-                cout << "Error. Por favor especifica un directorio o sufrirás la ira de las máquinas. >:)" << endl; /*This error happens if the 'HOME :D' 
+                cout << "Error. Por favor especifica un directorio o sufrirás la ira de las máquinas. >:)" << endl; /*This error happens if the 'HOME' 
                                                                                                                       environment variable is not set*/
             }else{
                 if(chdir(newDir) != 0){
@@ -94,7 +99,7 @@ void pipeless_command(vector<vector<string>> commands){
             if(execute_return < 0){
                 cout << "Error en el comando ingresado." << endl;
                 exit(EXIT_FAILURE);
-            }
+            }   //AQUI SUCEDE ALGO. ERROR EN EL MANEJO DE LAS PIPES?
         }else if(pid < 0){                                  //Fork failed.
             cout << "Algo salió mal durante la creación del proceso hijo." << endl;
         }else{
