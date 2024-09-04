@@ -61,7 +61,7 @@ bool parser(string command, long long &maxim, vector<vector<string>> &commands){
         temp_commands.clear();
         /*Here we compare the size of the commands vector to the current 'maxim' value. If it's larger, maxim is updated.
           Then, the fully parsed subcommand is added to the commands vector and we clear the temp_commands for the next iteration.*/
-    }
+    } 
     return 0;
 }
 
@@ -93,13 +93,13 @@ void pipeless_command(vector<vector<string>> commands){
         }
         arguments[commands[0].size()] = NULL;               //We set the last element of the array to NULL to indicate the end of the list of arguments.
         int pid = fork();                                   //Create a child process using fork(). The pid variable stores the process ID of the child.
-        if(pid == 0){                                       //Currently in the child process. Computer scientists are the worst at wording.
+        if(pid == 0){    
             int execute_return = execvp(arguments[0], arguments); //EXECUTE THE CHILD!!!
                                                                   //The execvp() executes the command, replacing the child's process' memory space with the new program in 'arguments'.
             if(execute_return < 0){
                 cout << "Error en el comando ingresado." << endl;
                 exit(EXIT_FAILURE);
-            }   //AQUI SUCEDE ALGO. ERROR EN EL MANEJO DE LAS PIPES?
+            }
         }else if(pid < 0){                                  //Fork failed.
             cout << "Algo salió mal durante la creación del proceso hijo." << endl;
         }else{
@@ -112,7 +112,7 @@ int main(){
     vector<vector<string>> commands; //2D vector where each subvector represents a command and its arguments.
     string command;                  //String to store commands inputed by the user.
     long long maxim;                 //maximum amount of arguments in a command.
-    cout << "Myshell Bachelet $ ";
+    cout << "Myshell Bachelet $ ";  
 
     //Loop to read and parse the user's input:
     while(getline(cin, command)){
@@ -122,7 +122,7 @@ int main(){
             command.clear();
             continue;
         }
-        if(commands.size() <= 1){           //Only one command? No problem! For only $3.99 we present you: pipless_command()!
+        if(commands.size() <= 1){           //Only one command? No problem! For only $3.99 we present you: pipeless_command()!
             pipeless_command(commands);
         }else{                              //Thanks Daniela and Jorge for explaining to me how pipes work. 
             char *arguments[commands.size()][maxim + 1];
@@ -132,7 +132,7 @@ int main(){
                 }
                 arguments[i][commands[i].size()] = NULL;
             }
-            long long all_pipes = commands.size() -1;
+            long long all_pipes = commands.size() - 1;
             int Pipes[all_pipes][2];
             for(int k=0; k < all_pipes; ++k){
                 pipe(Pipes[k]);             //Do you think pipe is short for Felipe? Phillip maybe? Intriguing.
@@ -155,7 +155,7 @@ int main(){
             }
             if(all_pipes > 1){      //Handling multiple commands.
                 while(counter < all_pipes - 1){
-                    if(fork() == 0){
+                    if(fork() == 0){ 
                         dup2(Pipes[counter][READ], READ);
                         dup2(Pipes[counter + 1][WRITE], WRITE);
                         for(int i=0; i < all_pipes; ++i){
@@ -180,13 +180,32 @@ int main(){
             if(fork()==0){
                 dup2(Pipes[counter][READ], READ);   //Read from the last pipe.
                 close(Pipes[counter][WRITE]);       //Close the write end of the previous pipe.
+                int path = 0;
+
+                while(path < all_pipes){            //CLOSE ALL THE PIPES!!!
+                    if(path == counter){
+                        path++;
+                        continue;
+                    }
+                    close(Pipes[path][READ]);
+                    close(Pipes[path][WRITE]);
+                    path++;
+                }
+                int p = execvp(arguments[counter+1][0], arguments[counter+1]);
+                if(p < 0){
+                    cout << "El comando ingresado no es valido." << endl;
+                    exit(0);
+                }
             }
-            for(size_t l=0; l < commands.size(); ++l)
+            for(int i=0; i<all_pipes; ++i){
+                close(Pipes[i][WRITE]);
+                close(Pipes[i][READ]);
+            }
+            for(size_t l=0; l < commands.size()-1; ++l)
                 wait(NULL);
         }
         commands.clear();
         command.clear();
-        cout << "Myshell Bachelet $ ";
     }   //Clear commands and command for the next iteration.
-    return 0;
+        return 0;
 }
