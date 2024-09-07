@@ -11,8 +11,18 @@
 
 using namespace std;
 
+// Colores ANSI para la terminal
+const string RESET_COLOR = "\033[0m";
+const string PROMPT_COLOR = "\033[1;32m";   // Verde
+const string ERROR_COLOR = "\033[1;31m";    // Rojo
+const string INFO_COLOR = "\033[1;34m";     // Azul
+
 const int READ = 0;
 const int WRITE = 1;
+
+void print_prompt() {
+    cout << PROMPT_COLOR << "Myshell Bachelet " << RESET_COLOR << "$ ";
+}
 
 //Reading and Writing variables for pipes.
 
@@ -26,12 +36,12 @@ bool parser(string command, long long &maxim, vector<vector<string>> &commands){
     if(command == "end")            //If the inputed command is "end", the program will be terminated.
         exit(0);
     else if(command.size() == 0){   //If there's no input then you should love yourself, now.
-        cout << "Myshell Bachelet $ ";
+        print_prompt();
         return 1;
     }
     else if(command == "wah"){
-        cout << "Wah!" << endl;
-        cout << "Myshell Bachelet $ ";
+        cout << INFO_COLOR << "Wah!" << RESET_COLOR << endl;
+        print_prompt();
         return 1;
     }
 
@@ -72,21 +82,21 @@ void pipeless_command(vector<vector<string>> commands){
         if(commands[0].size() < 2){     //"If no directory is specified"...
             const char *newDir = getenv("HOME");     //We try to change the directory to the user's home directory 
             if(newDir == nullptr){                  //I get PTSD whenever pointers are brought back. 
-                cout << "Error. Por favor especifica un directorio o sufrirás la ira de las máquinas. >:)" << endl; /*This error happens if the 'HOME' 
+                cout << ERROR_COLOR << "Error. Por favor especifica un directorio." << RESET_COLOR << endl; /*This error happens if the 'HOME' 
                                                                                                                       environment variable is not set*/
             }else{
                 if(chdir(newDir) != 0){
-                    cout << "Error al moverse hacia el directorio " << newDir << endl;
+                    cout << ERROR_COLOR << "Error al moverse hacia el directorio " << newDir << RESET_COLOR << endl;
                 }
             }
         }else{
             const char *newDir = commands[0][1].c_str();    /*c_str() function obtains a pointer to a null-terminated character array that represents 
                                                               the content of a string object.*/
             if(chdir(newDir) != 0){
-                cout << "Error al moverse hacia el directorio " << newDir << endl;
+                cout << ERROR_COLOR << "Error al moverse hacia el directorio " << newDir << RESET_COLOR << endl;
             }
         }
-        cout << "Myshell Bachelet $ ";
+        print_prompt();
     }else{
         char *arguments[commands[0].size() + 1];            //We create a char* array to store the command and its arguments in a format suitable for the 'execvp' system call.
         for(size_t i=0; i<commands[0].size(); ++i){
@@ -98,15 +108,15 @@ void pipeless_command(vector<vector<string>> commands){
             int execute_return = execvp(arguments[0], arguments); //EXECUTE THE CHILD!!!
                                                                   //The execvp() executes the command, replacing the child's process' memory space with the new program in 'arguments'.
             if(execute_return < 0){
-                cout << "Error en el comando ingresado." << endl;
+                cout << ERROR_COLOR << "Error en el comando ingresado." << RESET_COLOR << endl;
                 exit(EXIT_FAILURE);
             }
         }else if(pid < 0){                                  //Fork failed.
-            cout << "Algo salió mal durante la creación del proceso hijo." << endl;
+            cout << ERROR_COLOR << "Algo salió mal durante la creación del proceso hijo." << RESET_COLOR << endl;
         }else{
             wait(NULL);     //Normally kids aren't as fast as their parents, so we must give them time to catch up. I hope I can be a good dad someday! :D
         }
-        cout << "Myshell Bachelet $ ";
+        print_prompt();
     }       
 }
 
@@ -114,7 +124,7 @@ int main(){
     vector<vector<string>> commands; //2D vector where each subvector represents a command and its arguments.
     string command;                  //String to store commands inputed by the user.
     long long maxim;                 //maximum amount of arguments in a command.
-    cout << "Myshell Bachelet $ ";  
+    print_prompt();  
 
     //Loop to read and parse the user's input:
     while(getline(cin, command)){
@@ -151,7 +161,7 @@ int main(){
                 }
                 int execute_command = execvp(arguments[0][0], arguments[0]);
                 if(execute_command < 0){
-                    cout << "El comando ingresado no es válido." << endl;
+                    cout << ERROR_COLOR << "El comando ingresado no es válido." << RESET_COLOR << endl;
                     exit(0);
                 }
             }
@@ -172,7 +182,7 @@ int main(){
                         }
                         int execute_command2 = execvp(arguments[counter+1][0], arguments[counter+1]);
                         if(execute_command2 < 0){
-                            cout << "El comando ingresado no es válido." << endl;
+                            cout << ERROR_COLOR << "El comando ingresado no es válido." << RESET_COLOR << endl;
                             exit(0);
                         }
                     }
@@ -195,7 +205,7 @@ int main(){
                 }
                 int p = execvp(arguments[counter+1][0], arguments[counter+1]);
                 if(p < 0){
-                    cout << "El comando ingresado no es valido." << endl;
+                    cout << ERROR_COLOR << "El comando ingresado no es valido." << RESET_COLOR << endl;
                     exit(0);
                 }
             }
