@@ -4,10 +4,14 @@
 #include <iostream>
 #include <algorithm>
 #include <cstdlib>
+#include <csignal>
 #include <unistd.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/wait.h>		//System specific headers for file process management spoken during class, like the wait() function for example.
+#include <thread>
+#include <chrono>
+#include <semaphore.h>
 
 using namespace std;
 
@@ -20,8 +24,26 @@ const string INFO_COLOR = "\033[1;34m";     // Azul
 const int READ = 0;
 const int WRITE = 1;
 
+string reminder_message;
+sem_t print_semaphore;
+
 void print_prompt() {
-    cout << PROMPT_COLOR << "Myshell Bachelet " << RESET_COLOR << "$ ";
+    sem_wait(&print_semaphore); // Esperar para acceder a la sección crítica
+    cout << PROMPT_COLOR << "Myshell Bachelet " << RESET_COLOR << "$ " << flush;
+    sem_post(&print_semaphore); // Liberar la sección crítica
+}
+
+void reminder_handler(int signum) {
+    sem_wait(&print_semaphore); // Esperar para acceder a la sección crítica
+    cout << "\n" << INFO_COLOR << "Recordatorio: " << reminder_message << RESET_COLOR << endl;
+    print_prompt();  // Imprimir el prompt después del recordatorio
+    sem_post(&print_semaphore); // Liberar la sección crítica
+}
+
+void set_recordatorio(int seconds, const string &message) {
+    reminder_message = message;  // Guardar el mensaje del recordatorio
+    signal(SIGALRM, reminder_handler);  // Asociar el manejador a la señal SIGALRM
+    alarm(seconds);  // Programar la alarma para que se dispare en 'seconds' segundos
 }
 
 //Reading and Writing variables for pipes.
@@ -94,6 +116,15 @@ void pipeless_command(vector<vector<string>> commands){
                 cout << ERROR_COLOR << "Error al moverse hacia el directorio " << newDir << RESET_COLOR << endl;
             }
         }
+    }else if (commands[0][0] == "set" && commands[0][1] == "recordatorio") {
+        if (commands[0].size() >= 4) {
+            int seconds = stoi(commands[0][2]);
+            string message = commands[0][3];
+            thread t(set_recordatorio, seconds, message);
+            t.detach();
+        } else {
+            cout << ERROR_COLOR << "Formato incorrecto. Usa: set recordatorio <tiempo> <mensaje>" << RESET_COLOR << endl;
+        }
     }else{
         char *arguments[commands[0].size() + 1];            //We create a char* array to store the command and its arguments in a format suitable for the 'execvp' system call.
         for(size_t i=0; i<commands[0].size(); ++i){
@@ -120,6 +151,8 @@ int main(){
     vector<vector<string>> commands; //2D vector where each subvector represents a command and its arguments.
     string command;                  //String to store commands inputed by the user.
     long long maxim;                //maximum amount of arguments in a command.  
+
+    sem_init(&print_semaphore, 0, 1);
 
     //Loop to read and parse the user's input:
     while(true){
@@ -217,5 +250,6 @@ int main(){
         commands.clear();
         command.clear();
     }   //Clear commands and command for the next iteration.
+    sem_destroy(&print_semaphore);
     return 0;
 }
