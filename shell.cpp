@@ -86,6 +86,7 @@ void pipeless_command(vector<vector<string>> commands){
                 cout << "Error al moverse hacia el directorio " << newDir << endl;
             }
         }
+        cout << "Myshell Bachelet $ ";
     }else{
         char *arguments[commands[0].size() + 1];            //We create a char* array to store the command and its arguments in a format suitable for the 'execvp' system call.
         for(size_t i=0; i<commands[0].size(); ++i){
@@ -105,6 +106,7 @@ void pipeless_command(vector<vector<string>> commands){
         }else{
             wait(NULL);     //Normally kids aren't as fast as their parents, so we must give them time to catch up. I hope I can be a good dad someday! :D
         }
+        cout << "Myshell Bachelet $ ";
     }       
 }
 
