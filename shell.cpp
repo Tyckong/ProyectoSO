@@ -12,6 +12,7 @@
 #include <thread>
 #include <chrono>
 #include <semaphore.h>
+#include <fstream>
 
 using namespace std;
 
@@ -26,6 +27,11 @@ const int WRITE = 1;
 
 string reminder_message;
 sem_t print_semaphore;
+
+// Estructura para comandos favoritos
+vector<pair<int, string>> favorite_commands;
+string favs_file_path = "favs.txt"; // Ruta por defecto del archivo de favoritos
+int fav_command_count = 1;
 
 void print_prompt() {
     cout << PROMPT_COLOR << "Myshell Bachelet " << RESET_COLOR << "$ " << flush;
@@ -44,6 +50,116 @@ void set_recordatorio(int seconds, const string &message) {
     alarm(seconds);  // Programar la alarma para que se dispare en 'seconds' segundos
 }
 
+// Funciones para manejar comandos favoritos
+
+void load_favs() {
+    ifstream favs_file(favs_file_path);
+    if (favs_file.is_open()) {
+        string line;
+        while (getline(favs_file, line)) {
+            favorite_commands.emplace_back(fav_command_count++, line);
+        }
+        favs_file.close();
+    }
+}
+
+void save_favs() {
+    ofstream favs_file(favs_file_path);
+    if (favs_file.is_open()) {
+        for (const auto &command : favorite_commands) {
+            favs_file << command.second << endl;
+        }
+        favs_file.close();
+    }
+}
+
+void create_favs_file(const string &path) {
+    favs_file_path = path;
+    ofstream favs_file(favs_file_path);
+    if (!favs_file) {
+        cout << ERROR_COLOR << "Error creando archivo en " << path << RESET_COLOR << endl;
+    } else {
+        cout << INFO_COLOR << "Archivo de favoritos creado en " << path << RESET_COLOR << endl;
+    }
+    favs_file.close();
+}
+
+void show_favs() {
+    for (const auto &command : favorite_commands) {
+        cout << INFO_COLOR << command.first << ": " << command.second << RESET_COLOR << endl;
+    }
+}
+
+void delete_favs(const vector<int> &nums) {
+    favorite_commands.erase(
+        remove_if(favorite_commands.begin(), favorite_commands.end(),
+                  [&](const pair<int, string> &cmd) {
+                      return find(nums.begin(), nums.end(), cmd.first) != nums.end();
+                  }),
+        favorite_commands.end());
+}
+
+void search_favs(const string &cmd) {
+    for (const auto &command : favorite_commands) {
+        if (command.second.find(cmd) != string::npos) {
+            cout << INFO_COLOR << command.first << ": " << command.second << RESET_COLOR << endl;
+        }
+    }
+}
+
+void delete_all_favs() {
+    fav_command_count = 1;
+    favorite_commands.clear();
+}
+
+void execute_fav(int num) {
+    auto it = find_if(favorite_commands.begin(), favorite_commands.end(),
+                      [num](const pair<int, string> &cmd) { return cmd.first == num; });
+    if (it != favorite_commands.end()) {
+        system(it->second.c_str());
+    } else {
+        cout << ERROR_COLOR << "Comando no encontrado." << RESET_COLOR << endl;
+    }
+}
+
+void handle_favs_command(const vector<string> &args) {
+    if (args[1] == "crear") {
+        create_favs_file(args[2]);
+    } else if (args[1] == "mostrar") {
+        show_favs();
+    } else if (args[1] == "eliminar") {
+        vector<int> nums;
+        stringstream ss(args[2]);
+        string num;
+        while (getline(ss, num, ',')) {
+            nums.push_back(stoi(num));
+        }
+        delete_favs(nums);
+    } else if (args[1] == "buscar") {
+        search_favs(args[2]);
+    } else if (args[1] == "borrar") {
+        delete_all_favs();
+    } else if (args[1] == "cargar") {
+        load_favs();
+        show_favs();
+    } else if (args[1] == "guardar") {
+        save_favs();
+    } else if (args[1] == "ejecutar") {
+        int num = stoi(args[2]);
+        execute_fav(num);
+    } else {
+        cout << ERROR_COLOR << "Error en el comando ingresado." << RESET_COLOR << endl;
+    }
+}
+
+void add_to_favs(const string &command) {
+    auto it = find_if(favorite_commands.begin(), favorite_commands.end(),
+                      [&command](const pair<int, string> &cmd) { return cmd.second == command; });
+    if (it == favorite_commands.end()) {
+        favorite_commands.emplace_back(fav_command_count++, command);
+    }
+}
+
 //Reading and Writing variables for pipes.
 
 bool parser(string command, long long &maxim, vector<vector<string>> &commands){
@@ -53,9 +169,10 @@ bool parser(string command, long long &maxim, vector<vector<string>> &commands){
 
     vector<string> temp_commands;   //temporary vector to store the parts of the command as they are parsed.
 
-    if(command == "end")            //If the inputed command is "end", the program will be terminated.
+    if(command == "end"){            //If the inputed command is "end", the program will be terminated.
+        save_favs();
         exit(0);
-    else if(command.size() == 0){   //If there's no input then you should love yourself, now.
+    }else if(command.size() == 0){   //If there's no input then you should love yourself, now.
         return 1;
     }
     else if(command == "wah"){
@@ -123,6 +240,8 @@ void pipeless_command(vector<vector<string>> commands){
         } else {
             cout << ERROR_COLOR << "Formato incorrecto. Usa: set recordatorio <tiempo> <mensaje>" << RESET_COLOR << endl;
         }
+    }else if (commands[0][0] == "favs") {
+        handle_favs_command(commands[0]);
     }else{
         char *arguments[commands[0].size() + 1];            //We create a char* array to store the command and its arguments in a format suitable for the 'execvp' system call.
         for(size_t i=0; i<commands[0].size(); ++i){
@@ -142,6 +261,7 @@ void pipeless_command(vector<vector<string>> commands){
         }else{
             wait(NULL);     //Normally kids aren't as fast as their parents, so we must give them time to catch up. I hope I can be a good dad someday! :D
         }
+        add_to_favs(commands[0][0]);  // Agregar el comando a favoritos si no es de gestión de favoritos
     }
 }
 
@@ -151,9 +271,11 @@ int main(){
     long long maxim;                //maximum amount of arguments in a command.  
 
     sem_init(&print_semaphore, 0, 1);
+    load_favs(); // Cargar comandos favoritos al iniciar la shell
 
     //Loop to read and parse the user's input:
     while(true){
+        maxim = -1;
         print_prompt();
         if (!getline(cin, command)) break;
 
@@ -248,6 +370,7 @@ int main(){
         commands.clear();
         command.clear();
     }   //Clear commands and command for the next iteration.
+    save_favs();  // Guardar comandos favoritos antes de cerrar la shell
     sem_destroy(&print_semaphore);
     return 0;
 }
