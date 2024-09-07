@@ -36,12 +36,10 @@ bool parser(string command, long long &maxim, vector<vector<string>> &commands){
     if(command == "end")            //If the inputed command is "end", the program will be terminated.
         exit(0);
     else if(command.size() == 0){   //If there's no input then you should love yourself, now.
-        print_prompt();
         return 1;
     }
     else if(command == "wah"){
         cout << INFO_COLOR << "Wah!" << RESET_COLOR << endl;
-        print_prompt();
         return 1;
     }
 
@@ -96,7 +94,6 @@ void pipeless_command(vector<vector<string>> commands){
                 cout << ERROR_COLOR << "Error al moverse hacia el directorio " << newDir << RESET_COLOR << endl;
             }
         }
-        print_prompt();
     }else{
         char *arguments[commands[0].size() + 1];            //We create a char* array to store the command and its arguments in a format suitable for the 'execvp' system call.
         for(size_t i=0; i<commands[0].size(); ++i){
@@ -116,18 +113,19 @@ void pipeless_command(vector<vector<string>> commands){
         }else{
             wait(NULL);     //Normally kids aren't as fast as their parents, so we must give them time to catch up. I hope I can be a good dad someday! :D
         }
-        print_prompt();
-    }       
+    }
 }
 
 int main(){
     vector<vector<string>> commands; //2D vector where each subvector represents a command and its arguments.
     string command;                  //String to store commands inputed by the user.
-    long long maxim;                 //maximum amount of arguments in a command.
-    print_prompt();  
+    long long maxim;                //maximum amount of arguments in a command.  
 
     //Loop to read and parse the user's input:
-    while(getline(cin, command)){
+    while(true){
+        print_prompt();
+        if (!getline(cin, command)) break;
+
         maxim = 0;
         int ret = parser(command, maxim, commands);     //parses the command into 'commands' and updates the maxim with the maximum number of arguments in any subcommand.
         if(ret == 1){       //This means the command is either empty or an 'end' order.
@@ -219,5 +217,5 @@ int main(){
         commands.clear();
         command.clear();
     }   //Clear commands and command for the next iteration.
-        return 0;
+    return 0;
 }
