@@ -28,9 +28,7 @@ string reminder_message;
 sem_t print_semaphore;
 
 void print_prompt() {
-    sem_wait(&print_semaphore); // Esperar para acceder a la sección crítica
     cout << PROMPT_COLOR << "Myshell Bachelet " << RESET_COLOR << "$ " << flush;
-    sem_post(&print_semaphore); // Liberar la sección crítica
 }
 
 void reminder_handler(int signum) {
