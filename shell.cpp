@@ -30,7 +30,7 @@ sem_t print_semaphore;
 
 // Estructura para comandos favoritos
 vector<string> favorite_commands;
-string favs_file_path = "favs.txt"; // Ruta por defecto del archivo de favoritos
+string favs_file_path = ""; // Ruta por defecto del archivo de favoritos
 
 void print_prompt() {
     cout << PROMPT_COLOR << "Myshell Bachelet " << RESET_COLOR << "$ " << flush;
@@ -51,12 +51,21 @@ void set_recordatorio(int seconds, const string &message) {
 
 // Funciones para manejar comandos favoritos
 
+void add_to_favs(const string &command) {
+    auto it = find_if(favorite_commands.begin(), favorite_commands.end(), [&command](const string &cmd) { 
+        return cmd == command; 
+    });
+    if (it == favorite_commands.end()) {
+        favorite_commands.emplace_back(command);
+    }
+}
+
 void load_favs() {
     ifstream favs_file(favs_file_path);
     if (favs_file.is_open()) {
         string line;
         while (getline(favs_file, line)) {
-            favorite_commands.emplace_back(line);
+            add_to_favs(line);
         }
         favs_file.close();
     }
@@ -74,20 +83,43 @@ void save_favs() {
 
 void create_favs_file(const string &path) {
     favs_file_path = path;
-    ofstream favs_file(favs_file_path);
+    ifstream favs_file(favs_file_path);
     if (!favs_file) {
-        cout << ERROR_COLOR << "Error creando archivo en " << path << RESET_COLOR << endl;
+        favs_file.close();
+        ofstream favs_file(path);
+        if(!favs_file)
+            cout << ERROR_COLOR << "Error creando archivo en " << path << RESET_COLOR << endl;
+        else
+            cout << INFO_COLOR << "Archivo de favoritos creado en " << path << RESET_COLOR << endl;
     } else {
-        cout << INFO_COLOR << "Archivo de favoritos creado en " << path << RESET_COLOR << endl;
+        cout << INFO_COLOR << "Archivo de favoritos actualizado " << path << RESET_COLOR << endl;
+        load_favs();
     }
     favs_file.close();
 }
 
-void show_favs() {
+void show_favs_m() {
     int i = 1;
     for (const auto &command : favorite_commands) {
         cout << INFO_COLOR << i << ": " << command << RESET_COLOR << endl;
         i++;
+    }
+}
+void show_favs_c(const string &path) {
+    ifstream favs_file(path);
+    if(favs_file.is_open()) {
+        string command;
+        int i = 1;
+        while(favs_file) {
+            getline(favs_file, command);
+            if(command == "")
+                continue;
+            cout << INFO_COLOR << i << ": " << command << RESET_COLOR << endl;
+            i++;
+        }
+    }
+    else {
+        cout << ERROR_COLOR << "Error. No se pudo abrir el archivo" << RESET_COLOR << "\n";
     }
 }
 
@@ -114,20 +146,26 @@ void delete_all_favs() {
     favorite_commands.clear();
 }
 
-void execute_fav(int num) { // igual esta sus
+void execute_fav(int num) {
     if(num > 0 and num <= favorite_commands.size()) {
         system((favorite_commands[num-1]).c_str());
     }
     else {
-        cout << ERROR_COLOR << "Comando no encontrado." << RESET_COLOR << endl;
+        cout << ERROR_COLOR << "Error. Comando " << num << " no encontrado." << RESET_COLOR << "\n";
     }
 }
 
 void handle_favs_command(const vector<string> &args) {
     if (args[1] == "crear") {
         create_favs_file(args[2]);
+        return;
+    }
+    else if (args[1] == "cargar") {
+        load_favs();
+        show_favs_c(args[2]);
+        return;
     } else if (args[1] == "mostrar") {
-        show_favs();
+        show_favs_m();
     } else if (args[1] == "eliminar") {
         vector<int> nums;
         if(args.size() == 2) {
@@ -145,25 +183,13 @@ void handle_favs_command(const vector<string> &args) {
         search_favs(args[2]);
     } else if (args[1] == "borrar") {
         delete_all_favs();
-    } else if (args[1] == "cargar") {
-        load_favs();
-        show_favs();
-    } else if (args[1] == "guardar") {
+    }else if (args[1] == "guardar") {
         save_favs();
     } else if (args[1] == "ejecutar") {
         int num = stoi(args[2]);
         execute_fav(num);
     } else {
         cout << ERROR_COLOR << "Error en el comando ingresado." << RESET_COLOR << endl;
-    }
-}
-
-void add_to_favs(const string &command) {
-    auto it = find_if(favorite_commands.begin(), favorite_commands.end(), [&command](const string &cmd) { 
-        return cmd == command; 
-    });
-    if (it == favorite_commands.end()) {
-        favorite_commands.emplace_back(command);
     }
 }
 
@@ -271,7 +297,10 @@ void pipeless_command(vector<vector<string>> commands){
         }else{
             wait(NULL);     //Normally kids aren't as fast as their parents, so we must give them time to catch up. I hope I can be a good dad someday! :D
         }
-        add_to_favs(commands[0][0]);  // Agregar el comando a favoritos si no es de gestión de favoritos
+        string command;
+        for(auto s: commands[0])
+            command += s + " ";
+        add_to_favs(command);  // Agregar el comando a favoritos si no es de gestión de favoritos
     }
 }
 
@@ -328,7 +357,7 @@ int main(){
             }
             if(all_pipes > 1){      //Handling multiple commands.
                 while(counter < all_pipes - 1){
-                    if(fork() == 0){ 
+                    if(fork() == 0){
                         dup2(Pipes[counter][READ], READ);
                         dup2(Pipes[counter + 1][WRITE], WRITE);
                         for(int i=0; i < all_pipes; ++i){
