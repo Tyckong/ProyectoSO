@@ -24,8 +24,7 @@
    2. La shell acepta comandos con <i>pipes</i>, haciendo uso de un caracter "<i>|</i>" separando cada comando.<br>
    3. La shell acepta el comando "<i>end</i>" para terminar.<br>
    4. La shell acepta el comando "<i>wah</i>".<br>
-   5. El comando de recordatorio se ejecuta con "<i>set recordatorio x</i>", donde x es la cantidad de segundos que el programa espera<br> 
-      para accionar la alarma.<br>
+   5. Recordatorio se ejecuta con "<i>set recordatorio x</i>", donde x es la cantidad de segundos que el programa espera para activar la alarma.<br>
    6. El comando "<i>favs</i>" posee varios subcomandos.<br>
    <ul>
       6.1 <b>favs crear <i>[ruta]</i>/<i>[texto.txt]</i></b>: crea un archivo en donde se almacena el archivo de texto donde se escribirán los comandos favoritos.<br>
