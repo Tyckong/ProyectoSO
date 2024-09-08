@@ -4,15 +4,207 @@
 #include <iostream>
 #include <algorithm>
 #include <cstdlib>
+#include <csignal>
 #include <unistd.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/wait.h>		//System specific headers for file process management spoken during class, like the wait() function for example.
+#include <thread>
+#include <chrono>
+#include <semaphore.h>
+#include <fstream>
 
 using namespace std;
 
+// Colores ANSI para la terminal
+const string RESET_COLOR = "\033[0m";
+const string PROMPT_COLOR = "\033[1;32m";   // Verde
+const string ERROR_COLOR = "\033[1;31m";    // Rojo
+const string INFO_COLOR = "\033[1;34m";     // Azul
+
 const int READ = 0;
 const int WRITE = 1;
+
+string reminder_message;
+sem_t print_semaphore;
+
+// Estructura para comandos favoritos
+vector<string> favorite_commands;
+string favs_file_path = ""; // Ruta por defecto del archivo de favoritos
+
+void print_prompt() {
+    cout << PROMPT_COLOR << "Myshell Bachelet:" << RESET_COLOR << "$ " << flush;
+}
+
+void reminder_handler(int signum) {
+    sem_wait(&print_semaphore); // Esperar para acceder a la sección crítica
+    cout << "\n" << INFO_COLOR << "[!] " << reminder_message << RESET_COLOR << endl;
+    print_prompt();  // Imprimir el prompt después del recordatorio
+    sem_post(&print_semaphore); // Liberar la sección crítica
+}
+
+void set_recordatorio(int seconds, const string &message) {
+    reminder_message = message;  // Guardar el mensaje del recordatorio
+    signal(SIGALRM, reminder_handler);  // Asociar el manejador a la señal SIGALRM
+    alarm(seconds);  // Programar la alarma para que se dispare en 'seconds' segundos
+}
+
+// Funciones para manejar comandos favoritos
+
+void add_to_favs(const string &command) {
+    auto it = find_if(favorite_commands.begin(), favorite_commands.end(), [&command](const string &cmd) { 
+        return cmd == command; 
+    });
+    if (it == favorite_commands.end()) {
+        favorite_commands.emplace_back(command);
+    }
+}
+
+void load_favs() {
+    ifstream favs_file(favs_file_path);
+    if (favs_file.is_open()) {
+        string line;
+        while (getline(favs_file, line)) {
+            add_to_favs(line);
+        }
+        favs_file.close();
+    }
+}
+
+void save_favs() {
+    ofstream favs_file(favs_file_path);
+    if (favs_file.is_open()) {
+        for (const auto &command : favorite_commands) {
+            favs_file << command << endl;
+        }
+        favs_file.close();
+    }
+}
+
+void create_favs_file(const string &path) {
+    favs_file_path = path;
+    ifstream favs_file(favs_file_path);
+    if (!favs_file) {
+        favs_file.close();
+        ofstream favs_file(path);
+        if(!favs_file)
+            cout << ERROR_COLOR << "Error creando archivo en " << path << RESET_COLOR << endl;
+        else
+            cout << INFO_COLOR << "Archivo de favoritos creado en " << path << RESET_COLOR << endl;
+    } else {
+        cout << INFO_COLOR << "Archivo de favoritos actualizado " << path << RESET_COLOR << endl;
+        load_favs();
+    }
+    ofstream exit_path("actual_path.txt");
+    if (exit_path.is_open()) {
+        exit_path << favs_file_path;
+        exit_path.close();
+    }
+    favs_file.close();
+}
+
+void show_favs_m() {
+    int i = 1;
+    for (const auto &command : favorite_commands) {
+        cout << INFO_COLOR << i << ": " << command << RESET_COLOR << endl;
+        i++;
+    }
+    if(i == 1){
+        cout << ERROR_COLOR << "Error. No hay comandos para mostrar." << RESET_COLOR << "\n";
+    }
+}
+void show_favs_c(const string &path) {
+    ifstream favs_file(path);
+    if(favs_file.is_open()) {
+        string command;
+        int i = 1;
+        while(favs_file) {
+            getline(favs_file, command);
+            if(command == "")
+                continue;
+            cout << INFO_COLOR << i << ": " << command << RESET_COLOR << endl;
+            i++;
+        }
+    }
+    else {
+        cout << ERROR_COLOR << "Error. No se pudo abrir el archivo." << RESET_COLOR << "\n";
+    }
+}
+
+void delete_favs(const vector<int> &nums) {
+    for(auto i: nums) {
+        if(i > 0 and i <= favorite_commands.size()){
+            favorite_commands.erase(favorite_commands.begin()+i-1);
+            cout << INFO_COLOR << "Comando " << i << " eliminado correctamente." << RESET_COLOR << "\n";
+        }
+        else
+            cout << ERROR_COLOR << "Error. Comando " << i << " no encontrado." << RESET_COLOR << "\n";
+    }
+}
+
+void search_favs(const string &cmd) {
+    int i = 1;
+    for (const auto &command : favorite_commands) {
+        if (command.find(cmd) != string::npos) {
+            cout << INFO_COLOR << i << ": " << command << RESET_COLOR << endl;
+        }
+        i++;
+    }
+}
+
+void delete_all_favs() {
+    favorite_commands.clear();
+}
+
+void execute_fav(int num) {
+    if(num > 0 and num <= favorite_commands.size()) {
+        system((favorite_commands[num-1]).c_str());
+    }
+    else {
+        cout << ERROR_COLOR << "Error. Comando " << num << " no encontrado." << RESET_COLOR << "\n";
+    }
+}
+
+void handle_favs_command(const vector<string> &args) {
+    if (args[1] == "crear") {
+        create_favs_file(args[2]);
+        return;
+    }
+    else if (args[1] == "cargar") {
+        load_favs();
+        cout << INFO_COLOR << "Comandos extraidos del archivo exitosamente.\n" << RESET_COLOR;
+        show_favs_c(favs_file_path);
+        return;
+    } else if (args[1] == "mostrar") {
+        show_favs_m();
+    } else if (args[1] == "eliminar") {
+        vector<int> nums;
+        if(args.size() == 2) {
+            cout << ERROR_COLOR << "Formato incorrecto. Usa: favs eliminar <indice1>, <indice2>, ...\n" << RESET_COLOR;
+            return;
+        }
+        stringstream ss(args[2]);
+        string num;
+        while (getline(ss, num, ',')) {
+            nums.push_back(stoi(num));
+        }
+        sort(nums.begin(), nums.end(), greater<int>() );
+        delete_favs(nums);
+    } else if (args[1] == "buscar") {
+        search_favs(args[2]);
+    } else if (args[1] == "borrar") {
+        delete_all_favs();
+        cout << INFO_COLOR << "Lista de comandos borrados exitosamente.\n" << RESET_COLOR;
+    }else if (args[1] == "guardar") {
+        save_favs();
+        cout << INFO_COLOR << "Comandos sobreescritos en archivo exitosamente.\n" << RESET_COLOR;
+    } else if (args[1] == "ejecutar") {
+        int num = stoi(args[2]);
+        execute_fav(num);
+    } else {
+        cout << ERROR_COLOR << "Error en el comando ingresado." << RESET_COLOR << endl;
+    }
+}
 
 //Reading and Writing variables for pipes.
 
@@ -23,15 +215,14 @@ bool parser(string command, long long &maxim, vector<vector<string>> &commands){
 
     vector<string> temp_commands;   //temporary vector to store the parts of the command as they are parsed.
 
-    if(command == "end")            //If the inputed command is "end", the program will be terminated.
+    if(command == "end"){            //If the inputed command is "end", the program will be terminated.
+        save_favs();
         exit(0);
-    else if(command.size() == 0){   //If there's no input then you should love yourself, now.
-        cout << "Myshell Bachelet $ ";
+    }else if(command.size() == 0){   //If there's no input then you should love yourself, now.
         return 1;
     }
     else if(command == "wah"){
-        cout << "Wah!" << endl;
-        cout << "Myshell Bachelet $ ";
+        cout << INFO_COLOR << "Wah!" << RESET_COLOR << endl;
         return 1;
     }
 
@@ -72,21 +263,34 @@ void pipeless_command(vector<vector<string>> commands){
         if(commands[0].size() < 2){     //"If no directory is specified"...
             const char *newDir = getenv("HOME");     //We try to change the directory to the user's home directory 
             if(newDir == nullptr){                  //I get PTSD whenever pointers are brought back. 
-                cout << "Error. Por favor especifica un directorio o sufrirás la ira de las máquinas. >:)" << endl; /*This error happens if the 'HOME' 
+                cout << ERROR_COLOR << "Error. Por favor especifica un directorio." << RESET_COLOR << endl; /*This error happens if the 'HOME' 
                                                                                                                       environment variable is not set*/
             }else{
                 if(chdir(newDir) != 0){
-                    cout << "Error al moverse hacia el directorio " << newDir << endl;
+                    cout << ERROR_COLOR << "Error al moverse hacia el directorio " << newDir << RESET_COLOR << endl;
                 }
             }
         }else{
             const char *newDir = commands[0][1].c_str();    /*c_str() function obtains a pointer to a null-terminated character array that represents 
                                                               the content of a string object.*/
             if(chdir(newDir) != 0){
-                cout << "Error al moverse hacia el directorio " << newDir << endl;
+                cout << ERROR_COLOR << "Error al moverse hacia el directorio " << newDir << RESET_COLOR << endl;
             }
         }
-        cout << "Myshell Bachelet $ ";
+    }else if (commands[0][0] == "set" && commands[0][1] == "recordatorio") {
+        if (commands[0].size() >= 4) {
+            int seconds = stoi(commands[0][2]);
+            string message;
+            for(int i = 3; i < commands[0].size(); ++i) {
+                message += commands[0][i] + " ";
+            }
+            thread t(set_recordatorio, seconds, message);
+            t.detach();
+        } else {
+            cout << ERROR_COLOR << "Formato incorrecto. Usa: set recordatorio <tiempo> <mensaje>" << RESET_COLOR << endl;
+        }
+    }else if (commands[0][0] == "favs") {
+        handle_favs_command(commands[0]);
     }else{
         char *arguments[commands[0].size() + 1];            //We create a char* array to store the command and its arguments in a format suitable for the 'execvp' system call.
         for(size_t i=0; i<commands[0].size(); ++i){
@@ -98,26 +302,41 @@ void pipeless_command(vector<vector<string>> commands){
             int execute_return = execvp(arguments[0], arguments); //EXECUTE THE CHILD!!!
                                                                   //The execvp() executes the command, replacing the child's process' memory space with the new program in 'arguments'.
             if(execute_return < 0){
-                cout << "Error en el comando ingresado." << endl;
+                cout << ERROR_COLOR << "Error en el comando ingresado. . ." << RESET_COLOR << endl;
                 exit(EXIT_FAILURE);
             }
         }else if(pid < 0){                                  //Fork failed.
-            cout << "Algo salió mal durante la creación del proceso hijo." << endl;
+            cout << ERROR_COLOR << "Algo salió mal durante la creación del proceso hijo." << RESET_COLOR << endl;
         }else{
             wait(NULL);     //Normally kids aren't as fast as their parents, so we must give them time to catch up. I hope I can be a good dad someday! :D
         }
-        cout << "Myshell Bachelet $ ";
-    }       
+        string command;
+        for(auto s: commands[0])
+            command += s + " ";
+        add_to_favs(command);  // Agregar el comando a favoritos si no es de gestión de favoritos
+    }
 }
 
 int main(){
     vector<vector<string>> commands; //2D vector where each subvector represents a command and its arguments.
     string command;                  //String to store commands inputed by the user.
-    long long maxim;                 //maximum amount of arguments in a command.
-    cout << "Myshell Bachelet $ ";  
+    long long maxim;                //maximum amount of arguments in a command.  
+    ifstream actual_path("actual_path.txt");
+    if (actual_path.is_open()) {
+        string line;
+        getline(actual_path, line);
+        favs_file_path = line;
+        actual_path.close();
+    }
+
+    sem_init(&print_semaphore, 0, 1);
 
     //Loop to read and parse the user's input:
-    while(getline(cin, command)){
+    while(true){
+        maxim = -1;
+        print_prompt();
+        if (!getline(cin, command)) break;
+
         maxim = 0;
         int ret = parser(command, maxim, commands);     //parses the command into 'commands' and updates the maxim with the maximum number of arguments in any subcommand.
         if(ret == 1){       //This means the command is either empty or an 'end' order.
@@ -128,12 +347,17 @@ int main(){
             pipeless_command(commands);
         }else{                              //Thanks Daniela and Jorge for explaining to me how pipes work. 
             char *arguments[commands.size()][maxim + 1];
+            string aux = "";
             for(size_t i=0; i < commands.size(); ++i){
                 for(size_t j=0; j<commands[i].size(); j++){
                     arguments[i][j] = strdup(commands[i][j].c_str());
+                    if(j!=0) aux = aux + " " + arguments[i][j];
+                    else aux = aux + arguments[i][j];
                 }
                 arguments[i][commands[i].size()] = NULL;
+                if(i < commands.size()-1) aux = aux + " | ";
             }
+            add_to_favs(aux);
             long long all_pipes = commands.size() - 1;
             int Pipes[all_pipes][2];
             for(int k=0; k < all_pipes; ++k){
@@ -150,14 +374,15 @@ int main(){
                     path++;
                 }
                 int execute_command = execvp(arguments[0][0], arguments[0]);
+
                 if(execute_command < 0){
-                    cout << "El comando ingresado no es válido." << endl;
+                    cout << ERROR_COLOR << "El comando ingresado no es válido. ),:" << RESET_COLOR << endl;
                     exit(0);
                 }
             }
             if(all_pipes > 1){      //Handling multiple commands.
                 while(counter < all_pipes - 1){
-                    if(fork() == 0){ 
+                    if(fork() == 0){
                         dup2(Pipes[counter][READ], READ);
                         dup2(Pipes[counter + 1][WRITE], WRITE);
                         for(int i=0; i < all_pipes; ++i){
@@ -171,8 +396,9 @@ int main(){
                             }       //Here each child process redirects its standard input to the read/write end of the previous/next pipe and closes all other pipe ends.
                         }
                         int execute_command2 = execvp(arguments[counter+1][0], arguments[counter+1]);
+
                         if(execute_command2 < 0){
-                            cout << "El comando ingresado no es válido." << endl;
+                            cout << ERROR_COLOR << "El comando ingresado no es válido. :,c" << RESET_COLOR << endl;
                             exit(0);
                         }
                     }
@@ -194,8 +420,9 @@ int main(){
                     path++;
                 }
                 int p = execvp(arguments[counter+1][0], arguments[counter+1]);
+                
                 if(p < 0){
-                    cout << "El comando ingresado no es valido." << endl;
+                    cout << ERROR_COLOR << "El comando ingresado no es valido. :) " << aux << RESET_COLOR << endl;
                     exit(0);
                 }
             }
@@ -209,5 +436,8 @@ int main(){
         commands.clear();
         command.clear();
     }   //Clear commands and command for the next iteration.
-        return 0;
+    save_favs();  // Guardar comandos favoritos antes de cerrar la shell
+    sem_destroy(&print_semaphore);
+
+    return 0;
 }
