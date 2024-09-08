@@ -29,9 +29,8 @@ string reminder_message;
 sem_t print_semaphore;
 
 // Estructura para comandos favoritos
-vector<pair<int, string>> favorite_commands;
+vector<string> favorite_commands;
 string favs_file_path = "favs.txt"; // Ruta por defecto del archivo de favoritos
-int fav_command_count = 1;
 
 void print_prompt() {
     cout << PROMPT_COLOR << "Myshell Bachelet " << RESET_COLOR << "$ " << flush;
@@ -39,7 +38,7 @@ void print_prompt() {
 
 void reminder_handler(int signum) {
     sem_wait(&print_semaphore); // Esperar para acceder a la sección crítica
-    cout << "\n" << INFO_COLOR << "Recordatorio: " << reminder_message << RESET_COLOR << endl;
+    cout << "\n" << INFO_COLOR << "[!] " << reminder_message << RESET_COLOR << endl;
     print_prompt();  // Imprimir el prompt después del recordatorio
     sem_post(&print_semaphore); // Liberar la sección crítica
 }
@@ -57,7 +56,7 @@ void load_favs() {
     if (favs_file.is_open()) {
         string line;
         while (getline(favs_file, line)) {
-            favorite_commands.emplace_back(fav_command_count++, line);
+            favorite_commands.emplace_back(line);
         }
         favs_file.close();
     }
@@ -67,7 +66,7 @@ void save_favs() {
     ofstream favs_file(favs_file_path);
     if (favs_file.is_open()) {
         for (const auto &command : favorite_commands) {
-            favs_file << command.second << endl;
+            favs_file << command << endl;
         }
         favs_file.close();
     }
@@ -85,39 +84,41 @@ void create_favs_file(const string &path) {
 }
 
 void show_favs() {
+    int i = 1;
     for (const auto &command : favorite_commands) {
-        cout << INFO_COLOR << command.first << ": " << command.second << RESET_COLOR << endl;
+        cout << INFO_COLOR << i << ": " << command << RESET_COLOR << endl;
+        i++;
     }
 }
 
 void delete_favs(const vector<int> &nums) {
-    favorite_commands.erase(
-        remove_if(favorite_commands.begin(), favorite_commands.end(),
-                  [&](const pair<int, string> &cmd) {
-                      return find(nums.begin(), nums.end(), cmd.first) != nums.end();
-                  }),
-        favorite_commands.end());
+    for(auto i: nums) {
+        if(i > 0 and i <= favorite_commands.size())
+            favorite_commands.erase(favorite_commands.begin()+i-1);
+        else
+            cout << ERROR_COLOR << "Error. Comando " << i << " no encontrado." << RESET_COLOR << "\n";
+    }
 }
 
 void search_favs(const string &cmd) {
+    int i = 1;
     for (const auto &command : favorite_commands) {
-        if (command.second.find(cmd) != string::npos) {
-            cout << INFO_COLOR << command.first << ": " << command.second << RESET_COLOR << endl;
+        if (command.find(cmd) != string::npos) {
+            cout << INFO_COLOR << i << ": " << command << RESET_COLOR << endl;
         }
+        i++;
     }
 }
 
 void delete_all_favs() {
-    fav_command_count = 1;
     favorite_commands.clear();
 }
 
-void execute_fav(int num) {
-    auto it = find_if(favorite_commands.begin(), favorite_commands.end(),
-                      [num](const pair<int, string> &cmd) { return cmd.first == num; });
-    if (it != favorite_commands.end()) {
-        system(it->second.c_str());
-    } else {
+void execute_fav(int num) { // igual esta sus
+    if(num > 0 and num <= favorite_commands.size()) {
+        system((favorite_commands[num-1]).c_str());
+    }
+    else {
         cout << ERROR_COLOR << "Comando no encontrado." << RESET_COLOR << endl;
     }
 }
@@ -129,11 +130,16 @@ void handle_favs_command(const vector<string> &args) {
         show_favs();
     } else if (args[1] == "eliminar") {
         vector<int> nums;
+        if(args.size() == 2) {
+            cout << ERROR_COLOR << "Formato incorrecto. Usa: favs eliminar <indice1>, <indice2>, ...\n" << RESET_COLOR;
+            return;
+        }
         stringstream ss(args[2]);
         string num;
         while (getline(ss, num, ',')) {
             nums.push_back(stoi(num));
         }
+        sort(nums.begin(), nums.end(), greater<int>() );
         delete_favs(nums);
     } else if (args[1] == "buscar") {
         search_favs(args[2]);
@@ -153,10 +159,11 @@ void handle_favs_command(const vector<string> &args) {
 }
 
 void add_to_favs(const string &command) {
-    auto it = find_if(favorite_commands.begin(), favorite_commands.end(),
-                      [&command](const pair<int, string> &cmd) { return cmd.second == command; });
+    auto it = find_if(favorite_commands.begin(), favorite_commands.end(), [&command](const string &cmd) { 
+        return cmd == command; 
+    });
     if (it == favorite_commands.end()) {
-        favorite_commands.emplace_back(fav_command_count++, command);
+        favorite_commands.emplace_back(command);
     }
 }
 
@@ -234,7 +241,10 @@ void pipeless_command(vector<vector<string>> commands){
     }else if (commands[0][0] == "set" && commands[0][1] == "recordatorio") {
         if (commands[0].size() >= 4) {
             int seconds = stoi(commands[0][2]);
-            string message = commands[0][3];
+            string message;
+            for(int i = 3; i < commands[0].size(); ++i) {
+                message += commands[0][i] + " ";
+            }
             thread t(set_recordatorio, seconds, message);
             t.detach();
         } else {
