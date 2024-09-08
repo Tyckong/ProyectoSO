@@ -357,7 +357,6 @@ int main(){
                 arguments[i][commands[i].size()] = NULL;
                 if(i < commands.size()-1) aux = aux + " | ";
             }
-            //cout << "AUX: " << aux << '\n';
             add_to_favs(aux);
             long long all_pipes = commands.size() - 1;
             int Pipes[all_pipes][2];
@@ -375,10 +374,7 @@ int main(){
                     path++;
                 }
                 int execute_command = execvp(arguments[0][0], arguments[0]);
-                cout << "Cout tras primer execvp\n";
-                //if(execute_command >= 0){
-                //    add_to_favs(aux);
-                //}
+
                 if(execute_command < 0){
                     cout << ERROR_COLOR << "El comando ingresado no es válido. ),:" << RESET_COLOR << endl;
                     exit(0);
@@ -400,11 +396,7 @@ int main(){
                             }       //Here each child process redirects its standard input to the read/write end of the previous/next pipe and closes all other pipe ends.
                         }
                         int execute_command2 = execvp(arguments[counter+1][0], arguments[counter+1]);
-                        cout << "Cout tras segundo execvp\n";
-                        //if(execute_command2 >= 0){
-                        //    cout << "Añadiendo " << aux << "...\n";
-                        //    add_to_favs(aux);
-                        //}
+
                         if(execute_command2 < 0){
                             cout << ERROR_COLOR << "El comando ingresado no es válido. :,c" << RESET_COLOR << endl;
                             exit(0);
@@ -428,25 +420,11 @@ int main(){
                     path++;
                 }
                 int p = execvp(arguments[counter+1][0], arguments[counter+1]);
-                cout << "Cout tras tercer execvp\n";
-
-                //if(p >= 0){
-                //    favorite_commands.emplace_back(aux);
-                //    cout << "Añadiendo " << aux << "...\n";
-                //    add_to_favs(aux);
-                //}
                 
                 if(p < 0){
                     cout << ERROR_COLOR << "El comando ingresado no es valido. :) " << aux << RESET_COLOR << endl;
-                    //favorite_commands.emplace_back(aux);
-                    //delete_favs({(int)(favorite_commands.size())});
-                    //show_favs_m();
                     exit(0);
                 }
-                //else{
-                //    cout << "Añadiendo " << aux << "...\n";
-                //    add_to_favs(aux);
-                //}
             }
             for(int i=0; i<all_pipes; ++i){
                 close(Pipes[i][WRITE]);
