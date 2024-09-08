@@ -1,29 +1,41 @@
-# Proyecto Sistemas Operativos: Myshell Bachelet
-Proyecto semestral de Sistemas Operativos 2024-S2, el cual consiste en el desarrollo de una interpretadora de comandos para el sistema operativo Linux.
-El código para este proyecto está desarrollado en C++.
+<head>
+   <img src="https://normasgraficas.udec.cl/sites/default/files/marcaderecha.png" width="300" height="120">
+</head>
+<body>
+   <h1 align="center"><b></b>Proyecto Sistemas Operativos: Myshell Bachelet</b></h1>
+   Proyecto semestral de <i>Sistemas Operativos 2024-S2</i>, el cual consiste en el desarrollo de una interpretadora de comandos para el sistema operativo Linux.
+   El código para este proyecto está desarrollado en C++.
+   <h4 align="right"><i>
+      Tomás Contreras<br>
+      Claudia Cser<br>
+      Daniela Novoa<br>
+      Jorge Santis<br>
+   </i></h4>
 
-DISCLAIMER:
-Este proecto requiere del sistema operativo Linux y un compilador de C++
-Para compilar el archivo: g++ shell.cpp -o myshell
-Y para ejecutarlo: ./myshell
+   <h3 align="center"><ins>Disclaimer:</ins></h3>
+   Este proyecto requiere del sistema operativo <em>Linux</em> y un compilador de <em>C++</em><br>
+   Para compilar el archivo: <strong>g++ shell.cpp -o myshell</strong><br>
+   Y para ejecutarlo: <strong>./myshell</strong><br>
 
-Ejecutar comandos:
-1. La shell imprime una prompt que espera los comandos ingresados por el usuario.
-   De ser un comando válido, lo ejecuta; de no serlo, lo rechaza e imprime un mensaje de error.
-   Si el comando ingresado es un string vacío, la shell continúa con el prompt de espera.
-2. La shell acepta comandos con pipes, haciendo uso de un caracter "|" separando cada comando.
-3. La shell acepta el comando "end" para terminar.
-4. La shell acepta el comando "wah".
-5. El comando de recordatorio se ejecuta con "set recordatorio x", donde x es la cantidad de segundos
-   que el programa espera para accionar la alarma.
-6. El comando favs posee varios subcomandos.
-   6.1 favs crear [ruta]/[texto.txt]: crea un archivo en donde se almacena el archivo de texto donde
-       se escribirán los comandos favoritos.
-   6.2 favs mostrar: despliega la lista de comandos guardados.
-   6.3 favs eliminar [número1], [número2]: elimina los comandos asociados a los números.
-   6.4 favs buscar cmd: busca comandos que contengan substring cmd en el archivo de favoritos y los imprime en la terminal.
-   6.5 favs borrar: limpia el archivo de texto en la lista de favorito.
-   6.6 favs [número] ejecutar: ejecuta el comando de número [número] en la lista.
-   6.7 favs cargar: despliega los comandos en el archivo de favoritos en la terminal.
-   6.8 favs guardar: guarda los comandos agregados en la iteración actual de la shell en el archivo de favoritos.
+   <h3 align="center"><ins>Ejecutar comandos:</ins></h3>
+   1. La shell imprime una prompt que espera los comandos ingresados por el usuario.<br>
+      De ser un comando válido, lo ejecuta; de no serlo, lo rechaza e imprime un mensaje de error.<br>
+      Si el comando ingresado es un string vacío, la shell continúa con el prompt de espera.<br>
+   2. La shell acepta comandos con <i>pipes</i>, haciendo uso de un caracter "<i>|</i>" separando cada comando.<br>
+   3. La shell acepta el comando "<i>end</i>" para terminar.<br>
+   4. La shell acepta el comando "<i>wah</i>".<br>
+   5. El comando de recordatorio se ejecuta con "<i>set recordatorio x</i>", donde x es la cantidad de segundos que el programa espera<br> 
+      para accionar la alarma.<br>
+   6. El comando "<i>favs</i>" posee varios subcomandos.<br>
+   <ul>
+      6.1 <b>favs crear <i>[ruta]</i>/<i>[texto.txt]</i></b>: crea un archivo en donde se almacena el archivo de texto donde se escribirán los comandos favoritos.<br>
+      6.2 <b>favs mostrar</b>: despliega la lista de comandos guardados.<br>
+      6.3 <b>favs eliminar <i>[número1]</i>, <i>[número2]</i></b>: elimina los comandos asociados a los números.<br>
+      6.4 <b>favs buscar cmd</b>: busca comandos que contengan substring <i>cmd</i> en el archivo de favoritos y los imprime en la terminal.<br>
+      6.5 <b>favs borrar</b>: limpia el archivo de texto en la lista de favorito.<br>
+      6.6 <b>favs <i>[número]</i> ejecutar</b>: ejecuta el comando de número <i>[número]</i> en la lista.<br>
+      6.7 <b>favs cargar</b>: despliega los comandos en el archivo de favoritos en la pantalla.<br>
+      6.8 <b>favs guardar</b>: guarda los comandos agregados en la iteración actual de la shell en el archivo de favoritos.<br>
+   </ul>
+</body>
    
