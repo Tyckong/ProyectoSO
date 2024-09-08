@@ -36,5 +36,9 @@
       6.7 <b>favs cargar</b>: despliega los comandos en el archivo de favoritos en la pantalla.<br>
       6.8 <b>favs guardar</b>: guarda los comandos agregados en la iteración actual de la shell en el archivo de favoritos.<br>
    </ul>
+
+   <h3 align="center"><ins>Observaciones adicionales:</ins></h3>
+   La shell guarda cualquier tipo de comando del tipo <i>pipe</i>, independiente de si se pudo ejecutar o no.<br>
+   Se cree que este error tiene que ver con la edición de hebras distintas a la actual.
 </body>
    
