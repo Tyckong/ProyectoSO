@@ -38,7 +38,6 @@
    </ul>
 
    <h3 align="center"><ins>Observaciones adicionales:</ins></h3>
-   La shell guarda cualquier tipo de comando del tipo <i>pipe</i>, independiente de si se pudo ejecutar o no.<br>
-   Se cree que este error tiene que ver con la edición de hebras distintas a la actual.
+   La shell solo guarda los comandos que se ejecutan correctamente.<br>
 </body>
    
