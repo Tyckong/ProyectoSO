@@ -54,7 +54,9 @@ void set_recordatorio(int seconds, const string &message) {
 
 // Funciones para manejar comandos favoritos
 
-void add_to_favs(const string &command) {
+void add_to_favs(const string &command, int cmdCode) {
+    if (cmdCode != 0)
+        return;
     auto it = find_if(favorite_commands.begin(), favorite_commands.end(), [&command](const string &cmd) { 
         return cmd == command; 
     });
@@ -68,7 +70,7 @@ void load_favs() {
     if (favs_file.is_open()) {
         string line;
         while (getline(favs_file, line)) {
-            add_to_favs(line);
+            add_to_favs(line, 0); // cmdCode == 0 porque si se esta leyendo del archivo, ya se ejecuto bien
         }
         favs_file.close();
     }
@@ -266,14 +268,17 @@ void pipeless_command(vector<vector<string>> commands){
     //The commands 2D vector will contain the parsed command and its arguments. The first element represents the command and any subsequent elements the arguments.
     //This is going to be very fun.
     if(commands[0][0] == "cd"){         //We check for the 'cd' command used to change directory.
+        int cmdCode = 0;
         if(commands[0].size() < 2){     //"If no directory is specified"...
             const char *newDir = getenv("HOME");     //We try to change the directory to the user's home directory 
             if(newDir == nullptr){                  //I get PTSD whenever pointers are brought back. 
                 cout << ERROR_COLOR << "Error. Por favor especifica un directorio." << RESET_COLOR << endl; /*This error happens if the 'HOME' 
                                                                                                                       environment variable is not set*/
+                cmdCode = 1;
             }else{
                 if(chdir(newDir) != 0){
                     cout << ERROR_COLOR << "Error al moverse hacia el directorio " << newDir << RESET_COLOR << endl;
+                    cmdCode = 1;
                 }
             }
         }else{
@@ -281,9 +286,15 @@ void pipeless_command(vector<vector<string>> commands){
                                                               the content of a string object.*/
             if(chdir(newDir) != 0){
                 cout << ERROR_COLOR << "Error al moverse hacia el directorio " << newDir << RESET_COLOR << endl;
+                cmdCode = 1;
             }
         }
+        string command;
+        for(auto s: commands[0])
+            command += s + " ";
+        add_to_favs(command, WEXITSTATUS(cmdCode));
     }else if (commands[0][0] == "set" && commands[0][1] == "recordatorio") {
+        int cmdCode = 0;
         if (commands[0].size() >= 4) {
             int seconds = stoi(commands[0][2]);
             string message;
@@ -294,10 +305,16 @@ void pipeless_command(vector<vector<string>> commands){
             t.detach();
         } else {
             cout << ERROR_COLOR << "Formato incorrecto. Usa: set recordatorio <tiempo> <mensaje>" << RESET_COLOR << endl;
+            cmdCode = 1;
         }
+        string command;
+        for(auto s: commands[0])
+            command += s + " ";
+        add_to_favs(command, WEXITSTATUS(cmdCode));
     }else if (commands[0][0] == "favs") {
         handle_favs_command(commands[0]);
     }else{
+        int cmdCode = 0;
         char *arguments[commands[0].size() + 1];            //We create a char* array to store the command and its arguments in a format suitable for the 'execvp' system call.
         for(size_t i=0; i<commands[0].size(); ++i){
             arguments[i] = strdup(commands[0][i].c_str());
@@ -314,19 +331,20 @@ void pipeless_command(vector<vector<string>> commands){
         }else if(pid < 0){                                  //Fork failed.
             cout << ERROR_COLOR << "Algo salió mal durante la creación del proceso hijo." << RESET_COLOR << endl;
         }else{
-            wait(NULL);     //Normally kids aren't as fast as their parents, so we must give them time to catch up. I hope I can be a good dad someday! :D
+            wait(&cmdCode);     //Normally kids aren't as fast as their parents, so we must give them time to catch up. I hope I can be a good dad someday! :D
         }
         string command;
         for(auto s: commands[0])
             command += s + " ";
-        add_to_favs(command);  // Agregar el comando a favoritos si no es de gestión de favoritos
+        add_to_favs(command, WEXITSTATUS(cmdCode));  // Agregar el comando a favoritos si no es de gestión de favoritos
     }
 }
 
 int main(){
     vector<vector<string>> commands; //2D vector where each subvector represents a command and its arguments.
     string command;                  //String to store commands inputed by the user.
-    long long maxim;                //maximum amount of arguments in a command.  
+    long long maxim;                //maximum amount of arguments in a command.
+    int prevErrCode = -1;
     ifstream actual_path("actual_path.txt");
     if (actual_path.is_open()) {
         string line;
@@ -339,6 +357,7 @@ int main(){
 
     //Loop to read and parse the user's input:
     while(true){
+        bool actErrCode = true;
         maxim = -1;
         print_prompt();
         if (!getline(cin, command)) break;
@@ -363,7 +382,7 @@ int main(){
                 arguments[i][commands[i].size()] = NULL;
                 if(i < commands.size()-1) pipe_command = pipe_command + " | ";
             }
-            add_to_favs(pipe_command);
+            // 
             long long all_pipes = commands.size() - 1;
             int Pipes[all_pipes][2];
             for(int k=0; k < all_pipes; ++k){
@@ -383,7 +402,8 @@ int main(){
 
                 if(execute_command < 0){
                     cout << ERROR_COLOR << "El comando ingresado no es válido." << RESET_COLOR << endl;
-                    exit(0);
+                    actErrCode = false;
+                    exit(1);
                 }
             }
             if(all_pipes > 1){      //Handling multiple commands.
@@ -405,7 +425,8 @@ int main(){
 
                         if(execute_command2 < 0){
                             cout << ERROR_COLOR << "El comando ingresado no es válido." << RESET_COLOR << endl;
-                            exit(0);
+                            actErrCode = false;
+                            exit(1);
                         }
                     }
                     counter++;
@@ -428,16 +449,25 @@ int main(){
                 int p = execvp(arguments[counter+1][0], arguments[counter+1]);
                 
                 if(p < 0){
-                    cout << ERROR_COLOR << "El comando ingresado no es valido." << pipe_command << RESET_COLOR << endl;
-                    exit(0);
+                    cout << ERROR_COLOR << "El comando ingresado no es valido." << RESET_COLOR << endl;
+                    actErrCode = false;
+                    exit(1);
                 }
             }
+
             for(int i=0; i<all_pipes; ++i){
                 close(Pipes[i][WRITE]);
                 close(Pipes[i][READ]);
             }
-            for(size_t l=0; l < commands.size()-1; ++l)
-                wait(NULL);
+            int child_status;
+            int allCorrect = 0;
+            for(size_t l=0; l < commands.size()-1; ++l) {
+                wait(&child_status);
+                if (WEXITSTATUS(child_status) != 0)
+                    allCorrect = 1;
+            }
+            
+            add_to_favs(pipe_command, allCorrect);
         }
         commands.clear();
         command.clear();
