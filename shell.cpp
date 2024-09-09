@@ -33,7 +33,10 @@ vector<string> favorite_commands;
 string favs_file_path = ""; // Ruta por defecto del archivo de favoritos
 
 void print_prompt() {
-    cout << PROMPT_COLOR << "Myshell Bachelet:" << RESET_COLOR << "$ " << flush;
+    const size_t size = 1024; 
+    char directory[size];
+    getcwd(directory, size);
+    cout << PROMPT_COLOR << "Myshell Bachelet:" << INFO_COLOR << '~' << directory << RESET_COLOR << "$ " << flush;
 }
 
 void reminder_handler(int signum) {
@@ -224,6 +227,9 @@ bool parser(string command, long long &maxim, vector<vector<string>> &commands){
     else if(command == "wah"){
         cout << INFO_COLOR << "Wah!" << RESET_COLOR << endl;
         return 1;
+    }else if(command[command.size()-1] == '|'){         // If the inputed command end in '|' (a pipe that didn't work), exit and not read.
+        cout << ERROR_COLOR << "Error en el comando \"pipe\" ingresado." << RESET_COLOR << '\n';
+        return 1;
     }
 
     //Now, for VALID commands.
@@ -302,7 +308,7 @@ void pipeless_command(vector<vector<string>> commands){
             int execute_return = execvp(arguments[0], arguments); //EXECUTE THE CHILD!!!
                                                                   //The execvp() executes the command, replacing the child's process' memory space with the new program in 'arguments'.
             if(execute_return < 0){
-                cout << ERROR_COLOR << "Error en el comando ingresado. . ." << RESET_COLOR << endl;
+                cout << ERROR_COLOR << "Error en el comando ingresado." << RESET_COLOR << endl;
                 exit(EXIT_FAILURE);
             }
         }else if(pid < 0){                                  //Fork failed.
@@ -338,8 +344,8 @@ int main(){
         if (!getline(cin, command)) break;
 
         maxim = 0;
-        int ret = parser(command, maxim, commands);     //parses the command into 'commands' and updates the maxim with the maximum number of arguments in any subcommand.
-        if(ret == 1){       //This means the command is either empty or an 'end' order.
+        int ret = parser(command, maxim, commands);     //Parses the command into 'commands' and updates the maxim with the maximum number of arguments in any subcommand.
+        if(ret == 1){       //This means the command is either empty, an 'end' order or end with '|'.
             command.clear();
             continue;
         }
@@ -347,17 +353,17 @@ int main(){
             pipeless_command(commands);
         }else{                              //Thanks Daniela and Jorge for explaining to me how pipes work. 
             char *arguments[commands.size()][maxim + 1];
-            string aux = "";
+            string pipe_command = "";
             for(size_t i=0; i < commands.size(); ++i){
                 for(size_t j=0; j<commands[i].size(); j++){
                     arguments[i][j] = strdup(commands[i][j].c_str());
-                    if(j!=0) aux = aux + " " + arguments[i][j];
-                    else aux = aux + arguments[i][j];
+                    if(j!=0) pipe_command = pipe_command + " " + arguments[i][j];
+                    else pipe_command = pipe_command + arguments[i][j];
                 }
                 arguments[i][commands[i].size()] = NULL;
-                if(i < commands.size()-1) aux = aux + " | ";
+                if(i < commands.size()-1) pipe_command = pipe_command + " | ";
             }
-            add_to_favs(aux);
+            add_to_favs(pipe_command);
             long long all_pipes = commands.size() - 1;
             int Pipes[all_pipes][2];
             for(int k=0; k < all_pipes; ++k){
@@ -376,7 +382,7 @@ int main(){
                 int execute_command = execvp(arguments[0][0], arguments[0]);
 
                 if(execute_command < 0){
-                    cout << ERROR_COLOR << "El comando ingresado no es válido. ),:" << RESET_COLOR << endl;
+                    cout << ERROR_COLOR << "El comando ingresado no es válido." << RESET_COLOR << endl;
                     exit(0);
                 }
             }
@@ -398,7 +404,7 @@ int main(){
                         int execute_command2 = execvp(arguments[counter+1][0], arguments[counter+1]);
 
                         if(execute_command2 < 0){
-                            cout << ERROR_COLOR << "El comando ingresado no es válido. :,c" << RESET_COLOR << endl;
+                            cout << ERROR_COLOR << "El comando ingresado no es válido." << RESET_COLOR << endl;
                             exit(0);
                         }
                     }
@@ -422,7 +428,7 @@ int main(){
                 int p = execvp(arguments[counter+1][0], arguments[counter+1]);
                 
                 if(p < 0){
-                    cout << ERROR_COLOR << "El comando ingresado no es valido. :) " << aux << RESET_COLOR << endl;
+                    cout << ERROR_COLOR << "El comando ingresado no es valido." << pipe_command << RESET_COLOR << endl;
                     exit(0);
                 }
             }
