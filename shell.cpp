@@ -156,6 +156,10 @@ void execute_fav(int num) {
 }
 
 void handle_favs_command(const vector<string> &args) {
+    if(args.size() == 1) {
+        cout << ERROR_COLOR << "Error. Ingresa un subcomando junto a favs\n" << RESET_COLOR;
+        return;
+    }
     if (args[1] == "crear") {
         create_favs_file(args[2]);
         return;
